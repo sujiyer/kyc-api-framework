@@ -1,130 +1,150 @@
-# KYC API Framework for Financial Inclusion
+# Example: Community Bank Implementation
 
-**An open-source reference architecture for Know Your Customer (KYC) API integration at community financial institutions**
+This example walks through a complete KYC API Framework implementation for a community bank with the following profile:
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CFPB 1033 Aligned](https://img.shields.io/badge/CFPB%201033-Aligned-blue)](https://www.consumerfinance.gov/rules-policy/final-rules/personal-financial-data-rights/)
-[![NIST AI RMF](https://img.shields.io/badge/NIST%20AI%20RMF-Compliant-green)](https://www.nist.gov/system/files/documents/2023/01/26/AI%20RMF%201.0.pdf)
-
----
-
-## Overview
-
-This framework provides a practical, implementation-ready reference architecture for KYC API integration designed specifically for **community banks, credit unions, and CDFIs** — institutions that serve underbanked populations but often lack the engineering resources of large financial institutions.
-
-Financial exclusion frequently begins at onboarding. When KYC processes are friction-heavy, slow, or require documentation that underserved populations cannot easily provide, potential customers are turned away at the door. This framework addresses that gap by providing a modular, API-driven KYC architecture that reduces onboarding friction while maintaining full regulatory compliance.
-
-**Validated at production scale.** The patterns in this framework were developed and validated through real implementations at institutions processing high-volume KYC workflows, resulting in a **40% reduction in KYC-related onboarding friction** and a **25% improvement in processing efficiency** compared to legacy batch-processing approaches.
+- **Asset size:** $3.5B
+- **Customer base:** Mixed urban/suburban, including first-generation banking customers, recent immigrants, and thin-file applicants
+- **Products in scope:** Consumer checking accounts, savings accounts, personal loans
+- **Current state:** Branch-only KYC; online account opening exists but routes 100% of applications to manual review
+- **Goal:** Reduce manual review to <20% of applications; reduce average completion time from 3 business days to <5 minutes for auto-approved applications
 
 ---
 
-## The Problem This Framework Solves
+## Configuration
 
-Community financial institutions face a specific challenge that large banks do not: they serve the customers most likely to be excluded by high-friction KYC processes, yet they have the least engineering capacity to build sophisticated onboarding systems.
+### Risk Tier Thresholds
 
-The consequences are documented:
+```yaml
+risk_tier_config:
+  low_risk:
+    conditions:
+      - product_type: [CHECKING, SAVINGS]
+      - channel: [WEB, MOBILE, BRANCH]
+      - identity_confidence_threshold: 0.85
+      - no_sanctions_flags: true
+    outcome: AUTO_APPROVE_ELIGIBLE
 
-- **28 million U.S. adults are unbanked** (FDIC 2023 National Survey), and KYC friction is a primary barrier to account opening
-- **Legacy KYC systems** rely on batch processing, document uploads, and manual review queues that can take days — during which applicants abandon the process
-- **CFPB Section 1033** (effective April 2026) now requires financial institutions to provide consumers with portable access to their own financial data, creating new API infrastructure requirements that intersect directly with KYC workflows
-- **Commercial KYC vendors** charge licensing fees that are prohibitive for institutions under $10B in assets
+  medium_risk:
+    conditions:
+      - product_type: [CHECKING, SAVINGS, LOAN_PERSONAL]
+      - identity_confidence_range: [0.65, 0.84]
+      - no_sanctions_flags: true
+    outcome: PROGRESSIVE_VERIFY_ELIGIBLE
 
-This framework provides the architectural patterns, API specifications, and implementation guidance that smaller institutions need to build modern, inclusive KYC systems without starting from scratch.
-
----
-
-## Framework Components
-
-```
-kyc-api-framework/
-├── docs/
-│   ├── architecture-overview.md       # System design and component relationships
-│   ├── implementation-guide.md        # Step-by-step integration guide
-│   ├── compliance-alignment.md        # CFPB 1033, BSA/AML, NIST AI RMF mapping
-│   └── use-cases.md                   # Institution-specific use case documentation
-├── framework/
-│   ├── api-specification.md           # REST API endpoint definitions
-│   └── data-models.md                 # Entity schemas and data taxonomy
-├── examples/
-│   ├── community-bank/                # Community bank implementation pattern
-│   └── credit-union/                  # Credit union implementation pattern
-└── README.md
+  high_risk:
+    conditions:
+      - product_type: [LOAN_SECURED, LOAN_PERSONAL]
+        loan_amount_above: 25000
+      - any_sanctions_flag: true
+      - identity_confidence_below: 0.65
+        progressive_verify_failed: true
+    outcome: MANUAL_REVIEW_REQUIRED
 ```
 
+### Progressive Verification Configuration
+
+```yaml
+progressive_verification:
+  trigger_threshold: 0.65
+  eligible_risk_tiers: [LOW, MEDIUM]
+  available_methods:
+    - OPEN_BANKING:
+        enabled: true
+        min_account_age_days: 90
+        data_requested: [account_holder_name, address, account_status]
+    - UTILITY:
+        enabled: true
+        accepted_providers: [electric, gas, water, internet]
+        recency_required_days: 90
+    - EMPLOYER_PAYROLL:
+        enabled: false  # Enable when payroll API integration complete
+  max_attempts: 2
+  expiry_hours: 48
+```
+
+### Vendor Integrations
+
+```yaml
+vendors:
+  identity_verification:
+    provider: "[YOUR_PROVIDER]"
+    endpoint: "https://api.[provider].com/v2/verify"
+    timeout_seconds: 10
+    confidence_field: "result.score"
+
+  document_processing:
+    provider: "[YOUR_PROVIDER]"
+    endpoint: "https://api.[provider].com/verify/id"
+    timeout_seconds: 15
+    processing_mode: REALTIME  # Switch to ASYNC for MEDIUM/HIGH risk cost savings
+    confidence_field: "authenticity.score"
+
+  sanctions_screening:
+    provider: "[YOUR_PROVIDER]"
+    endpoint: "https://api.[provider].com/screen"
+    timeout_seconds: 8
+    lists: [OFAC_SDN, FINCEN_314A]
+    match_threshold: 0.85  # Scores above this treated as matches
+```
+
 ---
 
-## Core Design Principles
+## Workflow Sequence Diagram
 
-### 1. Friction Reduction Without Compliance Compromise
-Traditional KYC architectures treat compliance and user experience as opposing forces. This framework treats them as compatible: real-time API calls replace batch processing, progressive verification replaces all-or-nothing gates, and risk-tiered workflows route low-risk applicants through streamlined paths.
-
-### 2. Modular, Vendor-Agnostic Architecture
-The framework defines integration contracts, not vendor dependencies. Institutions can plug in their preferred identity verification provider, document processing vendor, or sanctions screening service without re-architecting the core workflow.
-
-### 3. CFPB Section 1033 Alignment by Design
-Rather than treating 1033 compliance as a retrofit, this framework builds data portability and consumer consent management into the KYC workflow from the start. Customer-permissioned data sharing reduces the documentation burden on applicants from underserved communities who may lack traditional financial history.
-
-### 4. NIST AI RMF Governance for AI-Assisted Verification
-Where AI or machine learning components assist in document verification or risk scoring, the framework applies NIST AI RMF 1.0 governance controls: model transparency, bias monitoring, human-in-the-loop escalation paths, and audit logging.
+```
+Customer          Onboarding UI     KYC Engine      Services
+   │                   │                │                │
+   │  Fill form        │                │                │
+   │──────────────────>│                │                │
+   │                   │  POST /initiate│                │
+   │                   │───────────────>│                │
+   │                   │                │  [parallel]    │
+   │                   │                │──Identity─────>│
+   │                   │                │──Sanctions────>│
+   │                   │                │                │
+   │                   │   kyc_id       │                │
+   │                   │<───────────────│                │
+   │  "Verifying..."   │                │  Results back  │
+   │<──────────────────│                │<───────────────│
+   │                   │                │                │
+   │                   │  [if score ≥ 0.85]              │
+   │                   │  webhook: APPROVED              │
+   │                   │<───────────────│                │
+   │  "Account open!"  │                │                │
+   │<──────────────────│                │                │
+   │                   │                │                │
+   │                   │  [if 0.65–0.84]│                │
+   │                   │  webhook: PROGRESSIVE_AVAILABLE │
+   │                   │<───────────────│                │
+   │  "Connect bank?"  │                │                │
+   │<──────────────────│                │                │
+```
 
 ---
 
-## Who This Framework Is For
+## Metrics to Track
 
-| Institution Type | Primary Use Case | Key Framework Components |
+After go-live, review these metrics weekly for the first 90 days:
+
+| Metric | Target | Action if Missed |
 |---|---|---|
-| Community Banks (<$10B assets) | Retail account onboarding | Full framework |
-| Credit Unions | Member onboarding, HELOC origination | API spec + data models |
-| CDFIs | Small business lending KYC | Risk-tiered workflow patterns |
-| FinTech overlays | White-label KYC for partner banks | API specification |
-| Regional Banks | Legacy system modernization | Migration patterns in implementation guide |
+| Auto-approval rate (LOW risk) | ≥ 70% | Review identity vendor confidence calibration |
+| Progressive verify completion rate | ≥ 50% of offered | Review UX of progressive verify flow |
+| Manual review rate (all applications) | ≤ 20% | Review risk tier thresholds |
+| Avg completion time (auto-approve) | ≤ 3 minutes | Review vendor latency; switch to parallel calls |
+| Avg completion time (manual review) | ≤ 4 business hours | Review queue staffing |
+| Abandonment at document upload | ≤ 15% | Review document upload UX |
+| False positive rate (sanctions) | ≤ 3% | Raise match threshold; review name normalization |
 
 ---
 
-## Alignment with Federal Policy Priorities
+## BSA Examination Readiness
 
-This framework directly supports three active federal policy priorities:
+For your next BSA examination, you can produce the following from this framework:
 
-**CFPB Section 1033 Final Rule (October 2024, effective April 2026)**
-Requires covered financial institutions to provide consumers with electronic access to their financial data through standardized APIs. This framework's consumer-permissioned data flow architecture satisfies Section 1033 data portability requirements within the KYC onboarding context.
+1. **CIP documentation:** Export Applicant records for any account showing identity verification date, method, and result
+2. **Sanctions screening records:** Export VerificationStep and SanctionsMatch records for any account
+3. **Decision audit trail:** Export AuditEvent log showing every action taken on any application
+4. **Risk-based approach documentation:** Show examiner the risk tier configuration and explain the rationale
 
-**Executive Order 14110 — Safe, Secure, and Trustworthy AI (October 2023)**
-Where AI assists KYC decisions (document verification, fraud scoring), this framework implements the governance standards required by E.O. 14110 for AI systems used in consequential decisions affecting consumers.
-
-**Financial Inclusion and the Unbanked**
-The FDIC and CFPB have both identified account opening friction as a primary driver of financial exclusion. This framework's progressive verification and risk-tiered approach directly reduces that friction for the populations most likely to be affected.
-
----
-
-## Quick Start
-
-See the [Implementation Guide](docs/implementation-guide.md) for full integration steps.
-
-For institution-specific patterns, see:
-- [Community Bank Example](examples/community-bank/README.md)
-- [Credit Union Example](examples/credit-union/README.md)
-
-For compliance mapping, see [Compliance Alignment](docs/compliance-alignment.md).
-
----
-
-## Contributing
-
-Contributions from financial technology practitioners, compliance professionals, and community institution engineers are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
----
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for full terms.
-
-This framework is provided as a public resource for the U.S. financial services industry. It is not affiliated with or endorsed by any regulatory body, commercial vendor, or employer institution.
-
----
-
-## Author
-
-**Sujatha Gopalakrishnan Iyer**
-Financial Technology Architect | AI Governance | Open Banking Systems
-
-*This framework is derived from architectural patterns developed and validated in production financial services environments. All proprietary, employer-specific, and confidential implementation details have been removed. The published framework represents generalized architectural knowledge intended for broad industry use.*
+Keep the risk tier configuration under version control. Examiners may ask when thresholds were changed and why.
