@@ -121,7 +121,14 @@ MIT License. See [LICENSE](LICENSE) for full terms.
 This framework is provided as a public resource for the U.S. financial services industry. It is not affiliated with or endorsed by any regulatory body, commercial vendor, or employer institution.
 
 ---
+## Roadmap
 
+- [ ] Add CDFI implementation example
+- [ ] Add sample risk tier configuration templates
+- [ ] Expand progressive verification patterns for immigrant populations
+- [ ] Add integration pattern for Jack Henry core banking system
+- [ ] Add FAQ for common BSA examiner questions
+      
 ## Author
 
 **Sujatha Gopalakrishnan Iyer**
