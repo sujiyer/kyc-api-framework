@@ -6,7 +6,14 @@ This document maps the KYC API Framework's design decisions to the specific regu
 
 ## CFPB Section 1033 — Personal Financial Data Rights
 
-**Rule:** CFPB Final Rule on Personal Financial Data Rights, published October 2024. Requires covered financial institutions to provide consumers with standardized, machine-readable access to their financial data through secure APIs upon request.
+**Rule:** Section 1033 of the Dodd-Frank Act establishes the statutory 
+right for consumers to access and share their own financial data with 
+third parties. The CFPB finalized a rule implementing this right in 
+October 2024, but that rule is currently under reconsideration — a 
+federal court has stayed enforcement while the CFPB undertakes a new 
+rulemaking process. Regardless of its current legal status, the 
+underlying statutory right exists and the data-sharing infrastructure 
+it catalysed is already in use across the industry.
 
 **Relevance to KYC:** Section 1033 creates a new consumer right to share their own financial data with third parties. Within the KYC context, this right can be used constructively: a consumer applying to a new institution can permission access to their existing financial account data to supplement or replace traditional identity documentation. This is particularly valuable for applicants from underserved populations who may have limited credit file history but do have existing banking relationships.
 
