@@ -1,4 +1,7 @@
 # KYC API Framework for Financial Inclusion
+📖 **Read the background:** [The Three Buttons Nobody Thinks About — How KYC Design Is Failing 24 Million Households](https://medium.com/@su9scorpio/the-three-buttons-nobody-thinks-about-cd6341e6ab8d)
+
+---
 
 **An open-source reference architecture for Know Your Customer (KYC) API integration at community financial institutions**
 
