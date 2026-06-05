@@ -24,7 +24,10 @@ Community financial institutions face a specific challenge that large banks do n
 
 The consequences are documented:
 
-- **28 million U.S. adults are unbanked** (FDIC 2023 National Survey), and KYC friction is a primary barrier to account opening
+- **According to the FDIC's 2023 National Survey, approximately 5.6 million 
+U.S. households remain unbanked and approximately 19 million are 
+underbanked — representing approximately 24 million households at the 
+edges of a financial system not designed with them in mind.** (FDIC 2023 National Survey), and KYC friction is a primary barrier to account opening
 - **Legacy KYC systems** rely on batch processing, document uploads, and manual review queues that can take days — during which applicants abandon the process
 - **CFPB Section 1033** (effective April 2026) now requires financial institutions to provide consumers with portable access to their own financial data, creating new API infrastructure requirements that intersect directly with KYC workflows
 - **Commercial KYC vendors** charge licensing fees that are prohibitive for institutions under $10B in assets
