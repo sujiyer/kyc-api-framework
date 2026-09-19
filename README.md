@@ -1,4 +1,7 @@
 # KYC API Framework for Financial Inclusion
+📎 **AI Governance layer:** This framework works alongside the 
+[Fintech AI Governance Framework](https://github.com/sujiyer/fintech-ai-governance-framework) 
+which governs the AI components within KYC systems.
 📖 **Read the background:** [The Three Buttons Nobody Thinks About — How KYC Design Is Failing 24 Million Households](https://medium.com/@su9scorpio/the-three-buttons-nobody-thinks-about-cd6341e6ab8d)
 
 ---
